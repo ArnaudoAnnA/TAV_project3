@@ -71,8 +71,8 @@ Kff = m*Vxb^2/l*(lr/Cf-lf/Cr+lf/Cr*K(3))+l-lr*K(3);
 % 
 % plot(kl);
 %%
-%open("model.slx")
-%sim("model.slx")
+open("model.slx")
+sim("model.slx")
 
 %%
 % TRANSFER FUNCTION
