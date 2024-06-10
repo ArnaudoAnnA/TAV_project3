@@ -14,7 +14,7 @@ l = lf+lr;
 
 delta_max = 25;
 
-Vxb = 50/3.6; % [m/s]
+Vxb = 80/3.6; % [m/s]
 
 
 %% MATRICES
@@ -38,7 +38,8 @@ C = eye(4);
 
 %% FB control
 
-K = place(A, B1, [-0.10,-0.15,-0.20,-0.25]');
+ K = place(A, B1, [-0.10,-0.15,-0.20,-0.25]');
+% K = acker(A, B1, [-0.25,-0.25,-0.25,-0.25]');
 % K = place(A, B1, [-100,-150,-200,-250]');
 
 Kff = m*Vxb^2/l*(lr/Cf-lf/Cr+lf/Cr*K(3))+l-lr*K(3);
@@ -92,5 +93,5 @@ RTF = (Ndelta*s+(Nbeta*Ydelta-Ybeta*Ndelta)/(m*Vxb))/...
 BetaTF = (Jz*Ydelta/m/Vxb*s+(-Nr*Ydelta-Ndelta*(m*Vxb-Yr))/m/Vxb)/...
     (Jz*s^2+(-Nr-Ybeta*Jz/m/Vxb)*s+(Nbeta+(Ybeta*Nr-Yr*Nbeta)/m/Vxb));
 
-figure, step(RTF)
-figure, step(BetaTF)
+% figure, step(RTF)
+% figure, step(BetaTF)
