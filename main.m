@@ -9,12 +9,29 @@ a = lf;
 lr = 1.5;
 b = lr;
 Cf = 2*60e3;
-Cr = 2*57e3;
+%Cr = 2*57e3;
+%Cr = 57e3; %over
+Cr = Cf*a/b;
 l = lf+lr;
+CR=Cr;
+CF=Cf;
+L=l;
 
 delta_max = 25;
 
-Vxb = 80/3.6; % [m/s]
+Vxb = 79/3.6; % [m/s]
+
+% check under/over steering
+if CR*b-CF*a>0
+    disp('============ understeering ============')
+elseif CF*a-CR*b==0
+    disp('============ neutral vehicle ============')
+else
+    disp('============ oversteering ============')
+    V_cr = sqrt(CF*CR*L^2/(m*(a*CF-b*CR)))*3.6;
+    disp(['critical speed: ',num2str(round(V_cr*10)/10),' km/h'])
+end
+
 
 %% MATRICES
 
@@ -47,7 +64,7 @@ Kff = m*Vxb^2/l*(lr/Cf-lf/Cr+lf/Cr*K(3))+l-lr*K(3);
 %% Curvature profile
 % matlab function in the simulink model
 % 
-% kl = zeros(2000,1);
+% kl = zeros(2000,1); 
 % index = 0;
 % 
 % for t=0:0.1:200
@@ -112,21 +129,22 @@ BetaTF_120 = (Jz*Ydelta/m/Vx_120*s+(-Nr_120*Ydelta-Ndelta_120*(m*Vx_120-Yr))/m/V
     (Jz*s^2+(-Nr_120-Ybeta*Jz/m/Vx_120)*s+(Nbeta_120+(Ybeta*Nr_120-Yr_120*Nbeta_120)/m/Vx_120));
 
 figure, step(RTF_50)
-hold on
-step(RTF_120)
+% hold on
+% step(RTF_120)
 
 figure, step(BetaTF_50)
-hold on
-step(BetaTF_120)
+% hold on
+% step(BetaTF_120)
 
 
 %% State space matrices for simulation
+% slide 29 TAV_AS_2.6
 CF=Cf;
 CR=Cr;
 Vv=Vxb;
 A_sim=[(-CF-CR)/(m*Vv),(-CF*a+CR*b-m*Vv^2)/(m*Vv^2);
     (-CF*a+CR*b)/Jz,(-CF*a^2-CR*b^2)/(Jz*Vv)];
-B_sim=[CF/(m*Vv) CR/(m*Vv);
+B_sim=[CF/(m*Vv) -CR/(m*Vv); %aggiunto -
     (CF*a/Jz) -(CR*b/Jz)];
 C_sim = [1,0
     0,1
@@ -176,11 +194,12 @@ pause
 
 
 %% POST PROCESSING
+OutputNames={'\beta','r','\rho','\alpha_F','\alpha_R','a_y'};
 L=l;
 tau_s=1;
 figure('Name','steering angle')
 hold all; grid on
-plot(out.delta,'LineWidth',2),xlabel('time [s]'),
+plot(out.delta,'LineWidth',2),xlabel('time [s]')
 %hold on; plot(L*out.ro*180/pi*tau_s,'--k'); 
 %legend('\delta','\delta_0','Fontsize',18,'location','best')
 %title('Steering Angle \delta_s')
@@ -222,7 +241,7 @@ ylabel('\beta_{dot} [rad/s]','Fontsize',18)
 % %% --------- Plot beta vs ay
 % figure('Name','beta vs ay')
 % % plot(a_y(:,2),Beta(:,2))
-% scatter(out.ay(:,2),out.Beta(:,2),[],out.ay(:,1)); colorbar
+% scatter(out.ay.Data(:,2),out.Beta(:,2),[],out.ay.Data(:,1)); colorbar
 % xlabel('a_y [m/s^2]')
 % ylabel('\beta [deg]'); grid on
 % text(11,2.2,['time[s]'])
@@ -230,7 +249,7 @@ ylabel('\beta_{dot} [rad/s]','Fontsize',18)
 % %--------- Plot delta vs ay
 % figure('Name','delta vs ay')
 % % plot(a_y(:,2),Beta(:,2))
-% scatter(out.ay(:,2),out.delta_rad(:,2)*180/pi,[],out.ay(:,1)); colorbar
+% scatter(out.ay.Data(:,2),out.delta_rad(:,2)*180/pi,[],out.ay.Data(:,1)); colorbar
 % xlabel('a_y [m/s^2]'); ylabel('\delta_{vol} [deg]'); grid on
 % text(11,22,['time[s]'])
 % set(gca,'FontName','Times New Roman','FontSize',16)
@@ -238,12 +257,12 @@ ylabel('\beta_{dot} [rad/s]','Fontsize',18)
 % figure('Name','delta-delta_0 vs ay')
 % delta0 =L*ro.Data;
 % % plot(a_y(:,2),Beta(:,2))
-% plot(out.ay(:,2),(out.delta_rad(:,2)-delta0*tau_s)*180/pi,'linewidth',2); 
+% plot(out.ay.Data(:,2),(out.delta_rad(:,2)-delta0*tau_s)*180/pi,'linewidth',2); 
 % xlabel('a_y [m/s^2]'); ylabel('\delta_{vol}-\delta_0 [deg]'); grid on
 % set(gca,'FontName','Times New Roman','FontSize',16)
 
 
-% --------- Plot alpha_F e alpha_R 
+%% --------- Plot alpha_F e alpha_R 
 figure('Name','alphaF e R'); hold all
 plot(out.alfaF*180/pi,'LineWidth',2); plot(out.alfaR*180/pi,'LineWidth',2); 
 xlabel('time [s]'); ylabel('\alpha [deg]'); grid on; 
@@ -251,7 +270,7 @@ legend('\alpha_F','\alpha_R','Fontsize',16,'location','best')
 set(gca,'FontName','Times New Roman','FontSize',14)
 legend({},'FontSize',16)
 
-%--------- Plot curvature
+%% --------- Plot curvature
 figure('Name','rho'); hold all
 plot(out.ro,'LineWidth',2); 
 xlabel('time [s]'); ylabel('\rho [1/m]'); grid on; 
@@ -260,10 +279,12 @@ set(gca,'FontName','Times New Roman','FontSize',14)
 spost_x=out.Var_trajectory(:,1);
 spost_y=out.Var_trajectory(:,2);
 
-% figure
-% hold all; grid on
-% % plot(spost_x,spost_y,'LineWidth',2)
-% scatter(spost_x,spost_y,[],a_y(:,1))
-% title('trajectory'),axis equal,xlabel('X [m]'),ylabel('Y[m]');colorbar
-% text(49,12,['time[s]'])
+figure
+hold all; grid on
+% plot(spost_x,spost_y,'LineWidth',2)
+scatter(spost_x,spost_y,[],out.ay.Data(:,1))
+title('trajectory'),axis equal,xlabel('X [m]'),ylabel('Y[m]');colorbar
+text(49,12,['time[s]'])
+
+
 
