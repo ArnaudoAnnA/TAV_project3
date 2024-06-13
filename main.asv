@@ -9,8 +9,8 @@ a = lf;
 lr = 1.5;
 b = lr;
 Cf = 2*60e3;
-% Cr = 2*57e3;% under
-% Cr = 57e3; % over
+%Cr = 2*57e3;% under
+%Cr = 57e3; % over
 Cr = Cf*a/b; % neutral
 l = lf+lr;
 CR=Cr;
@@ -163,6 +163,7 @@ t_end_sim=200;
 %% SIMULATION
 %open("model.slx")
 %out = sim("model.slx");
+pause
 %% Bode plot 
 % clear A B C D
 %     A=[(-CF-CR)/(m*Vv),(-CF*a+CR*b-m*Vv^2)/(m*Vv^2);
@@ -192,7 +193,7 @@ t_end_sim=200;
 % set(findall(gcf,'-property','FontSize'),'FontSize',13)
 
 %%
-Vxbt = 10:40;
+Vxbt = 10:1:40;
 Vxbt = [Vxbt'; 40*ones(169, 1)];
 K = zeros(4, 1, 200);
 Kff = zeros(200,1);
@@ -214,15 +215,18 @@ B2 = [0
     0
     -(Cr*lr^2+Cf*lf^2)/(Jpsi*Vxbt(t))];
 
-K(:,1,t) = acker(A, B1, [-1,-1,-1,-1]')';
+K(:,:,t) = acker(A, B1, [-1,-1,-1,-1]')';
 
-Kff(t) = m*Vxbt(t)^2/l*(lr/Cf-lf/Cr+lf/Cr*K(3,:,t))+l-lr*K(3,1,t);
+Kff(t) = m*Vxbt(t)^2/l*(lr/Cf-lf/Cr+lf/Cr*K(3,:,t))+l-lr*K(3,:,t);
 
 end
 
+K1 = K
+plot(1:200, K(1,1,:))
 
 ts_K = timeseries(K, 'Name', 'K');
 ts_Kff = timeseries(Kff, 'Name', 'Kff');
+
 
 %% POST PROCESSING
 OutputNames={'\beta','r','\rho','\alpha_F','\alpha_R','a_y'};
