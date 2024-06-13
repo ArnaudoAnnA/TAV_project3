@@ -87,9 +87,6 @@ Kff = m*Vxb^2/l*(lr/Cf-lf/Cr+lf/Cr*K(3))+l-lr*K(3);
 % end 
 % 
 % plot(kl);
-%%
-%open("model.slx")
-%sim("model.slx")
 
 %%
 % TRANSFER FUNCTION
@@ -161,8 +158,11 @@ D_sim = [0 0;
 t_end_sim=200;
 
 
-pause
+% pause
 
+%% SIMULATION
+open("model.slx")
+out = sim("model.slx");
 
 %% Bode plot 
 % clear A B C D
@@ -283,7 +283,9 @@ figure
 hold all; grid on
 % plot(spost_x,spost_y,'LineWidth',2)
 scatter(spost_x,spost_y,[],out.ay.Data(:,1))
+%title('trajectory'),xlabel('X [m]'),ylabel('Y[m]');colorbar
 title('trajectory'),axis equal,xlabel('X [m]'),ylabel('Y[m]');colorbar
+
 text(49,12,['time[s]'])
 
 
