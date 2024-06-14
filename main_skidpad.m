@@ -315,6 +315,38 @@ t_end_sim=200;
 % setoptions(h,'FreqUnits','Hz','PhaseVisible','on','Grid','On','Xlim',[0.1 10],'MagScale','linear','MagUnits','abs'); %,'PhaseWrapping','on'
 % set(findall(gcf,'-property','FontSize'),'FontSize',13)
 
+%%
+Vxbt = 10:40;
+Vxbt = [Vxbt'; 40*ones(169, 1)];
+K = zeros(4, 1, 200);
+Kff = zeros(200,1);
+
+for t=1:200
+    
+    A = [0 1 0 0 
+    0 -(Cf+Cr)/(m*Vxbt(t)) (Cf+Cr)/m (Cr*lr-Cf*lf)/(m*Vxbt(t))
+    0 0 0 1
+    0 (Cr*lr-Cf*lf)/(Jpsi*Vxbt(t)) (-Cr*lr+Cf*lf)/Jpsi -(Cr*lr^2+Cf*lf^2)/(Jpsi*Vxbt(t))];
+
+B1 = [0
+    Cf/m
+    0
+    Cf*lf/Jpsi];
+
+B2 = [0
+    (Cr*lr-Cf*lf)/(m*Vxbt(t))-Vxbt(t)
+    0
+    -(Cr*lr^2+Cf*lf^2)/(Jpsi*Vxbt(t))];
+
+K(:,1,t) = acker(A, B1, [-1,-1,-1,-1]')';
+
+Kff(t) = m*Vxbt(t)^2/l*(lr/Cf-lf/Cr+lf/Cr*K(3,:,t))+l-lr*K(3,1,t);
+
+end
+
+
+ts_K = timeseries(K, 'Name', 'K');
+ts_Kff = timeseries(Kff, 'Name', 'Kff');
 
 %% POST PROCESSING
 OutputNames={'\beta','r','\rho','\alpha_F','\alpha_R','a_y'};
