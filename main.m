@@ -10,8 +10,8 @@ lr = 1.5;
 b = lr;
 Cf = 2*60e3;
 Cr = 2*57e3;% under
-% Cr = 57e3; % over
-% Cr = Cf*a/b; % neutral
+%Cr = 57e3; % over
+%Cr = Cf*a/b; % neutral
 l = lf+lr;
 CR=Cr;
 CF=Cf;
@@ -50,6 +50,7 @@ X_r = [zeros(length(vel),2)];
 Y_r = [zeros(length(vel),6)];
 ay_r = [zeros(length(vel),1)];
 u_r = [delta_f;0];
+values = [zeros(length(vel),2)];
 
 % Definition of state space variables
 StateNames ={'\beta','r'};
@@ -91,7 +92,8 @@ for k=1:length(vel)
     X_r(k,:) = -A^-1*B*u_r;
     Y_r(k,:) = C*X_r(k,:)'+D*u_r;
     ay_r(k,:) = X_r(k,2)'*Vv;
-%     [V,D] = eig(A);
+    [V,D] = eig(A);
+    values(k,:)=eig(A);
 end
 
 % poles
@@ -139,7 +141,8 @@ plot(vel*3.6,zeros(length(vel),1),'--k')
 xlabel('vel [km/h]'),ylabel('det(A)'),title('$\lambda_1 \lambda_2$','interpreter','latex','Fontsize',18)
 ylim([-10 100])
 set(gca,'FontName','Times New Roman','FontSize',14)
-
+figure, 
+plot(vel*3.6,values)
 figure('Name','steady state response vs. velocity')
 subplot(2,2,1)
 plot(vel*3.6,Y_r(:,1),'o','linewidth',2,'Displayname','$\beta$'); %xlabel('vel [km/h]'),%ylabel('Y_r'),
@@ -182,38 +185,7 @@ K_beta_num = (beta_meno_beta_0(end)- beta_meno_beta_0(1))/(ay_r(end)-ay_r(1))
 
 pause
 
-%% MATRICES
-
-A = [0 1 0 0 
-    0 -(Cf+Cr)/(m*Vxb) (Cf+Cr)/m (Cr*lr-Cf*lf)/(m*Vxb)
-    0 0 0 1
-    0 (Cr*lr-Cf*lf)/(Jpsi*Vxb) (-Cr*lr+Cf*lf)/Jpsi -(Cr*lr^2+Cf*lf^2)/(Jpsi*Vxb)];
-
-B1 = [0
-    Cf/m
-    0
-    Cf*lf/Jpsi];
-
-B2 = [0
-    (Cr*lr-Cf*lf)/(m*Vxb)-Vxb
-    0
-    -(Cr*lr^2+Cf*lf^2)/(Jpsi*Vxb)];
-
-C = eye(4);
-
-%% FB control
-
-% K = place(A, B1, [-0.10,-0.15,-0.20,-0.25]');
-% K = place(A, B1, [-100,-150,-200,-250]');
-K = acker(A, B1, [-5, -5, -5, -5]');
-
-Kff = m*Vxb^2/l*(lr/Cf-lf/Cr+lf/Cr*K(3))+l-lr*K(3);
-
-
-
-
-%%
-% TRANSFER FUNCTION
+%% TRANSFER FUNCTION
 Vx_50=50/3.6;
 Vx_120=120/3.6;
 Ybeta = -(Cf+Cr);
@@ -251,11 +223,67 @@ BetaTF_120 = (Jz*Ydelta/m/Vx_120*s+(-Nr_120*Ydelta-Ndelta_120*(m*Vx_120-Yr))/m/V
 
 figure, step(RTF_50)
 % hold on
-% step(RTF_120)
+step(RTF_120)
 
 figure, step(BetaTF_50)
 % hold on
-% step(BetaTF_120)
+step(BetaTF_120)
+
+
+%% MATRICES
+% used in the control model
+vel=[[1:0.1:20],[20:0.5:50]];
+A = [0 1 0 0 
+    0 -(Cf+Cr)/(m*Vxb) (Cf+Cr)/m (Cr*lr-Cf*lf)/(m*Vxb)
+    0 0 0 1
+    0 (Cr*lr-Cf*lf)/(Jpsi*Vxb) (-Cr*lr+Cf*lf)/Jpsi -(Cr*lr^2+Cf*lf^2)/(Jpsi*Vxb)];
+
+B1 = [0
+    Cf/m
+    0
+    Cf*lf/Jpsi];
+
+B2 = [0
+    (Cr*lr-Cf*lf)/(m*Vxb)-Vxb
+    0
+    -(Cr*lr^2+Cf*lf^2)/(Jpsi*Vxb)];
+
+C = eye(4);
+
+
+%% FB and FF controllers
+% K = place(A, B1, [-0.10,-0.15,-0.20,-0.25]');
+% K = place(A, B1, [-100,-150,-200,-250]');
+K = acker(A, B1, [-5, -5, -5, -5]');
+
+Kff = m*Vxb^2/l*(lr/Cf-lf/Cr+lf/Cr*K(3))+l-lr*K(3);
+
+%% Plot how K matrix varies wrt vehicle speed
+gain_matrix = zeros(length(vel), 4);
+for k=1:length(vel)
+    Vx=vel(k);      % vehicle speed
+    % state space matrices: A,B,C,D
+    A = [0 1 0 0 
+    0 -(Cf+Cr)/(m*Vx) (Cf+Cr)/m (Cr*lr-Cf*lf)/(m*Vx)
+    0 0 0 1
+    0 (Cr*lr-Cf*lf)/(Jpsi*Vx) (-Cr*lr+Cf*lf)/Jpsi -(Cr*lr^2+Cf*lf^2)/(Jpsi*Vx)];
+
+    B1 = [0
+        Cf/m
+        0
+        Cf*lf/Jpsi];
+    
+    B2 = [0
+        (Cr*lr-Cf*lf)/(m*Vx)-Vx
+        0
+        -(Cr*lr^2+Cf*lf^2)/(Jpsi*Vx)];
+    
+    C = eye(4);
+    gain_matrix(k,:) = acker(A, B1, [-5, -5, -5, -5]');
+end
+
+figure, plot(vel, gain_matrix)
+legend('k(1)', 'k(2)', 'k(3)', 'k(4)')
 
 
 %% State space matrices for simulation
@@ -285,8 +313,8 @@ t_end_sim=200;
 % pause
 
 %% SIMULATION
-%open("model.slx")
-%out = sim("model.slx");
+open("model.slx")
+sim("model.slx");
 %% Bode plot 
 % clear A B C D
 %     A=[(-CF-CR)/(m*Vv),(-CF*a+CR*b-m*Vv^2)/(m*Vv^2);
@@ -353,37 +381,6 @@ plot(out.ay,'LineWidth',2)
 title('Lateral Acceleration a_y [m/s^2]','Fontsize',16)
 xlabel('time [s]')
 ylabel('')
-% ---- plot beta beta_dot
-figure('Name','\beta, \beta_dot')
-hold all; grid on
-plot(out.beta.Data,out.beta_dot(:,2),'LineWidth',2) %title('Lateral Acceleration a_y [m/s^2]'),
-xlabel('\beta [deg]','Fontsize',18)
-ylabel('\beta_{dot} [rad/s]','Fontsize',18)
-
-
-% %% --------- Plot beta vs ay
-% figure('Name','beta vs ay')
-% % plot(a_y(:,2),Beta(:,2))
-% scatter(out.ay.Data(:,2),out.Beta(:,2),[],out.ay.Data(:,1)); colorbar
-% xlabel('a_y [m/s^2]')
-% ylabel('\beta [deg]'); grid on
-% text(11,2.2,['time[s]'])
-% set(gca,'FontName','Times New Roman','FontSize',16)
-% %--------- Plot delta vs ay
-% figure('Name','delta vs ay')
-% % plot(a_y(:,2),Beta(:,2))
-% scatter(out.ay.Data(:,2),out.delta_rad(:,2)*180/pi,[],out.ay.Data(:,1)); colorbar
-% xlabel('a_y [m/s^2]'); ylabel('\delta_{vol} [deg]'); grid on
-% text(11,22,['time[s]'])
-% set(gca,'FontName','Times New Roman','FontSize',16)
-% %--------- Plot delta-delta0 vs ay
-% figure('Name','delta-delta_0 vs ay')
-% delta0 =L*ro.Data;
-% % plot(a_y(:,2),Beta(:,2))
-% plot(out.ay.Data(:,2),(out.delta_rad(:,2)-delta0*tau_s)*180/pi,'linewidth',2); 
-% xlabel('a_y [m/s^2]'); ylabel('\delta_{vol}-\delta_0 [deg]'); grid on
-% set(gca,'FontName','Times New Roman','FontSize',16)
-
 
 %% --------- Plot alpha_F e alpha_R 
 figure('Name','alphaF e R'); hold all
@@ -411,5 +408,45 @@ title('trajectory'),axis equal,xlabel('X [m]'),ylabel('Y[m]');colorbar
 
 text(49,12,['time[s]'])
 
+%% Vehicle Trajectory and Animation
+F_Size=13;
+
+figure('Name','Vehicle CG location','NumberTitle','off','PaperType','A4');
+hold all; grid on
+plot(out.Var_trajectory(:,1),out.Var_trajectory(:,2),'Linewidth',2);
+title('CG Trajectory'); axis equal
+set(gca,'FontName','Times New Roman','FontSize',F_Size)
+xlabel('X [m]'); ylabel('Y [m]')
+X_G = out.Var_trajectory(:,1);
+Y_G = out.Var_trajectory(:,2);
+
+% figure
+%hold on
+axis equal
+dt_sim = 1e-3
+dt_frame = 0.1; % [s] vehicle frame refresh (time) interval 
+decim_frame = dt_frame/dt_sim;
+
+% cycle to show vehicle motion
+for cont1=1:decim_frame:length(out.Psi)
+    X = X_G(cont1)+[-b a a -b]';
+    Y = Y_G(cont1)+[-1 -1 1 1]';
+    vert = [X,Y];
+    fac = [1 2 3 4];
+    hVeicolo = patch('Faces',fac,'Vertices',vert,'FaceColor','red','FaceAlpha',.5);
+    direction = [0 0 1];
+    xlim([X(1)-5 X(2)+3])
+    ylim([Y(1)-5 Y(3)+3])
+    
+    x0 = X_G(cont1);
+    y0 = Y_G(cont1);
+    z0 = 0;
+    ORIGIN = [x0,y0,z0];
+    rotate(hVeicolo,direction,out.Psi(cont1,2),ORIGIN);
+    pause(0.1)
+end
+
+plot(out.Var_trajectory(:,1),out.Var_trajectory(:,2),'Linewidth',2);
+axis auto
 
 
