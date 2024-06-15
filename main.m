@@ -229,10 +229,9 @@ figure, step(BetaTF_50)
 % hold on
 step(BetaTF_120)
 
-
+close all
 %% MATRICES
 % used in the control model
-vel=[[1:0.1:20],[20:0.5:50]];
 A = [0 1 0 0 
     0 -(Cf+Cr)/(m*Vxb) (Cf+Cr)/m (Cr*lr-Cf*lf)/(m*Vxb)
     0 0 0 1
@@ -252,38 +251,61 @@ C = eye(4);
 
 
 %% FB and FF controllers
+% Matrix K with pole placement
 % K = place(A, B1, [-0.10,-0.15,-0.20,-0.25]');
 % K = place(A, B1, [-100,-150,-200,-250]');
-K = acker(A, B1, [-5, -5, -5, -5]');
-
+K = acker(A, B1, [-2, -2, -2, -2]');
 Kff = m*Vxb^2/l*(lr/Cf-lf/Cr+lf/Cr*K(3))+l-lr*K(3);
 
+
+% Matrix K with linear quadratic set-up
+Q = [1,0,0,0;...
+    0,1,0,0;...
+    0,0,1,0;...
+    0,0,0,1];
+R = 1;
+D=zeros(4,1);
+sys=ss(A,B1,C,D);
+K1=lqr(sys,Q,R);
+Kff1 = m*Vxb^2/l*(lr/Cf-lf/Cr+lf/Cr*K1(3))+l-lr*K1(3);
+
 %% Plot how K matrix varies wrt vehicle speed
+vel=linspace(1,90)/3.6;
 gain_matrix = zeros(length(vel), 4);
+Kff_matrix = zeros(length(vel));
 for k=1:length(vel)
     Vx=vel(k);      % vehicle speed
     % state space matrices: A,B,C,D
-    A = [0 1 0 0 
+    Ak = [0 1 0 0 
     0 -(Cf+Cr)/(m*Vx) (Cf+Cr)/m (Cr*lr-Cf*lf)/(m*Vx)
     0 0 0 1
     0 (Cr*lr-Cf*lf)/(Jpsi*Vx) (-Cr*lr+Cf*lf)/Jpsi -(Cr*lr^2+Cf*lf^2)/(Jpsi*Vx)];
 
-    B1 = [0
+    B1k = [0
         Cf/m
         0
         Cf*lf/Jpsi];
     
-    B2 = [0
+    B2k = [0
         (Cr*lr-Cf*lf)/(m*Vx)-Vx
         0
         -(Cr*lr^2+Cf*lf^2)/(Jpsi*Vx)];
     
-    C = eye(4);
-    gain_matrix(k,:) = acker(A, B1, [-5, -5, -5, -5]');
+    Ck = eye(4);
+    %gain_matrix(k,:) = acker(A, B1, [-5, -5, -5, -5]');
+    sys=ss(Ak,B1k,Ck,zeros(4,1));
+    gain_matrix(k,:) = lqr(sys,Q,R);
+
+    Kff_matrix(k) = m*Vxb^2/l*(lr/Cf-lf/Cr+lf/Cr*gain_matrix(k,3))+l-lr*gain_matrix(k,3);
 end
 
 figure, plot(vel, gain_matrix)
 legend('k(1)', 'k(2)', 'k(3)', 'k(4)')
+figure, plot(vel, gain_matrix(:,1))
+figure, plot(vel, gain_matrix(:,2))
+figure, plot(vel, gain_matrix(:,3))
+figure, plot(vel, gain_matrix(:,4))
+figure, plot(vel, Kff_matrix);
 
 
 %% State space matrices for simulation
@@ -293,7 +315,7 @@ CR=Cr;
 Vv=Vxb;
 A_sim=[(-CF-CR)/(m*Vv),(-CF*a+CR*b-m*Vv^2)/(m*Vv^2);
     (-CF*a+CR*b)/Jz,(-CF*a^2-CR*b^2)/(Jz*Vv)];
-B_sim=[CF/(m*Vv) -CR/(m*Vv); %aggiunto -
+B_sim=[CF/(m*Vv) CR/(m*Vv); %aggiunto -
     (CF*a/Jz) -(CR*b/Jz)];
 C_sim = [1,0
     0,1
@@ -310,11 +332,9 @@ D_sim = [0 0;
 t_end_sim=200;
 
 
-% pause
-
 %% SIMULATION
 open("model.slx")
-sim("model.slx");
+out=sim("model.slx");
 %% Bode plot 
 % clear A B C D
 %     A=[(-CF-CR)/(m*Vv),(-CF*a+CR*b-m*Vv^2)/(m*Vv^2);
