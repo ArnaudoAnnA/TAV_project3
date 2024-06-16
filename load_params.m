@@ -8,7 +8,7 @@ lr = 1.5;
 b = lr;
 Cf = 2*60e3;
 %Cr = 2*57e3;% under
-Cr = 57e3; % over
+%Cr = 57e3; % over
 %Cr = Cf*a/b; % neutral
 l = lf+lr;
 CR=Cr;
@@ -20,5 +20,5 @@ t_end_sim=200;
 
 delta_max = 25;
 
-Vxb = 60/3.6; % [m/s]
+Vxb = 80/3.6; % [m/s]
 Vv=Vxb;
